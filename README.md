@@ -16,7 +16,7 @@ That's it. No dependencies beyond Python 3 and a terminal. Works on Linux and ma
 
 ## What you get
 
-- **504 curated facts** across CS fundamentals, ML, AI, and computational biology
+- **574 curated facts** across CS fundamentals, ML, AI, computational biology, and bash tricks
 - **Real-time feedback** — green for correct, red for wrong, yellow cursor
 - **Live WPM and accuracy** as you type
 - **Progress bar** per sentence
@@ -31,6 +31,7 @@ That's it. No dependencies beyond Python 3 and a terminal. Works on Linux and ma
 | **Artificial Intelligence** | 143 | Transformers, NLP, computer vision, RL, generative models, scaling laws, interpretability, AI safety, robotics |
 | **Cross-domain** | 25 | ML hardware, distributed training, numerical methods, bioinformatics |
 | **AI for Biology** | 70 | Protein structure (AlphaFold), genomics, single-cell, protein language models, drug discovery, medical imaging, clinical AI |
+| **Bash & Shell Tricks** | 70 | History expansion, parameter manipulation, process substitution, globs, job control, set options, arrays, traps, file descriptors, SSH |
 
 ## Controls
 
