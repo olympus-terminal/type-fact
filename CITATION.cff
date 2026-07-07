@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "Type Fact: An Interactive Typing Tutor for CS, ML, AI, and Computational Biology"
+authors:
+  - family-names: Nelson
+    given-names: David R.
+license: MIT
+repository-code: https://github.com/olympus-terminal/type-fact
+keywords:
+  - typing tutor
+  - computer science education
+  - machine learning
+  - artificial intelligence
+  - computational biology
+  - bioinformatics
+  - educational software
+abstract: >-
+  A terminal-based typing game that teaches computer science, machine learning,
+  artificial intelligence, and computational biology through 574 curated factual
+  sentences. Designed as an educational tool for training speed, accuracy, and
+  domain knowledge simultaneously.

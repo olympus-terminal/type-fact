@@ -1,0 +1,24 @@
+{
+    "title": "Type Fact: An Interactive Typing Tutor for CS, ML, AI, and Computational Biology",
+    "description": "A terminal-based typing game that teaches computer science, machine learning, artificial intelligence, and computational biology through 574 curated factual sentences. Designed as an educational tool for training speed, accuracy, and domain knowledge simultaneously.",
+    "creators": [
+        {
+            "name": "Nelson, David R.",
+            "affiliation": "Senior Research Scientist"
+        }
+    ],
+    "keywords": [
+        "typing tutor",
+        "computer science education",
+        "machine learning",
+        "artificial intelligence",
+        "computational biology",
+        "bioinformatics",
+        "educational software",
+        "gamification"
+    ],
+    "license": "MIT",
+    "upload_type": "software",
+    "access_right": "open",
+    "language": "eng"
+}

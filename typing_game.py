@@ -3,7 +3,9 @@
 
 import curses
 import random
+import re
 import time
+import webbrowser
 
 SENTENCES = [
     # ── Computer Science fundamentals (70) ──────────────────────────────────────
@@ -599,6 +601,510 @@ SENTENCES = [
     "Using wait -n in bash 4.3 and later returns as soon as any background job finishes instead of waiting for all of them.",
 ]
 
+WIKI_OVERRIDES = {
+    "TCP guarantees reliable delivery by using sequence numbers, ": "Transmission_Control_Protocol",
+    "Public key cryptography uses a pair of keys so that data enc": "Public-key_cryptography",
+    "Garbage collection automatically reclaims memory by tracing ": "Garbage_collection_(computer_science)",
+    "The fast Fourier transform reduces the complexity of computi": "Fast_Fourier_transform",
+    "Conway's Game of Life shows that simple cellular automaton r": "Conway%27s_Game_of_Life",
+    "Version control systems like Git use directed acyclic graphs": "Version_control",
+    "Cache locality matters because accessing nearby memory addre": "Locality_of_reference",
+    "The Byzantine Generals Problem asks how distributed nodes ca": "Byzantine_fault",
+    "Bloom filters use multiple hash functions to test set member": "Bloom_filter",
+    "Unix pipes compose small programs by connecting stdout of on": "Pipeline_(Unix)",
+    "A binary search halves the search space with each comparison": "Binary_search",
+    "DNS resolves human-readable domain names into IP addresses u": "Domain_Name_System",
+    "Paxos achieves consensus among distributed nodes even when s": "Paxos_(computer_science)",
+    "The dining philosophers problem illustrates how concurrent r": "Dining_philosophers_problem",
+    "CRDTs allow multiple replicas to be updated independently an": "Conflict-free_replicated_data_type",
+    "An LRU cache evicts the least recently accessed item first, ": "Cache_replacement_policies",
+    "The RSA algorithm derives its security from the computationa": "RSA_(cryptosystem)",
+    "Two's complement encoding lets hardware use the same additio": "Two%27s_complement",
+    "The producer-consumer pattern uses a bounded buffer with sem": "Producer%E2%80%93consumer_problem",
+    "ACID properties ensure database transactions are atomic, con": "ACID",
+    "The bellman equation in dynamic programming expresses an opt": "Bellman_equation",
+    "TLS establishes an encrypted channel by using asymmetric key": "Transport_Layer_Security",
+    "Pipelining in CPUs overlaps the fetch, decode, and execute s": "Instruction_pipelining",
+    "The stable marriage algorithm pairs two equally sized sets s": "Stable_marriage_problem",
+    "An operating system's scheduler assigns CPU time slices to p": "Scheduling_(computing)",
+    "Reed-Solomon codes add redundant symbols to data so that the": "Reed%E2%80%93Solomon_error_correction",
+    "A semaphore is an integer-based synchronization primitive th": "Semaphore_(programming)",
+    "Branch prediction allows a CPU to speculatively execute inst": "Branch_predictor",
+    "The AES block cipher encrypts data in 128-bit blocks through": "Advanced_Encryption_Standard",
+    "Ethernet uses CSMA/CD to detect collisions on a shared mediu": "Carrier-sense_multiple_access_with_collision_detection",
+    "Topological sorting arranges a directed acyclic graph into a": "Topological_sorting",
+    "The Cooley-Tukey algorithm recursively splits a DFT into sma": "Cooley%E2%80%93Tukey_FFT_algorithm",
+    "NAT allows multiple devices on a private network to share a ": "Network_address_translation",
+    "Shannon entropy quantifies the minimum average number of bit": "Entropy_(information_theory)",
+    "Lazy evaluation delays computation until the result is actua": "Lazy_evaluation",
+    "The Raft consensus protocol elects a leader that manages log": "Raft_(algorithm)",
+    "Page tables map virtual addresses to physical frames, lettin": "Page_table",
+    "Context switching saves and restores CPU register state so t": "Context_switch",
+    "The SYN flood attack exploits the TCP three-way handshake by": "SYN_flood",
+    "Vector clocks track causal ordering of events in distributed": "Vector_clock",
+    "The NP-completeness of Boolean satisfiability means any NP p": "Boolean_satisfiability_problem",
+    "An interrupt signals the CPU to pause its current work and h": "Interrupt",
+    "Erasure coding splits data into fragments with redundancy so": "Erasure_code",
+    "The bias-variance tradeoff shows that reducing one source of": "Bias%E2%80%93variance_tradeoff",
+    "Convolutional neural networks exploit spatial locality by sh": "Convolutional_neural_network",
+    "Cross-validation estimates model performance by repeatedly t": "Cross-validation_(statistics)",
+    "Support vector machines find the maximum-margin hyperplane t": "Support-vector_machine",
+    "Random forests reduce overfitting by averaging predictions f": "Random_forest",
+    "The curse of dimensionality means that distance metrics beco": "Curse_of_dimensionality",
+    "Learning rate schedules like cosine annealing gradually redu": "Learning_rate",
+    "Ensemble methods combine multiple models to reduce variance ": "Ensemble_learning",
+    "L1 regularization induces sparsity by driving small weights ": "Lasso_(statistics)",
+    "LSTM networks use forget, input, and output gates to control": "Long_short-term_memory",
+    "K-means clustering minimizes the sum of squared distances be": "K-means_clustering",
+    "Residual connections in ResNets allow gradients to flow dire": "Residual_neural_network",
+    "Precision measures the fraction of positive predictions that": "Precision_and_recall",
+    "Recall measures the fraction of actual positives that are co": "Precision_and_recall",
+    "The ROC curve plots true positive rate against false positiv": "Receiver_operating_characteristic",
+    "Gated recurrent units simplify LSTMs by merging the cell sta": "Gated_recurrent_unit",
+    "The kernel trick lets SVMs operate in high-dimensional space": "Kernel_method",
+    "Batch gradient descent computes the loss over all training e": "Gradient_descent",
+    "Early stopping halts training when validation loss begins to": "Early_stopping",
+    "The information bottleneck theory suggests deep networks com": "Information_bottleneck_method",
+    "Depthwise separable convolutions factorize standard convolut": "Depthwise_separable_convolution",
+    "The F1 score is the harmonic mean of precision and recall, b": "F-score",
+    "The EM algorithm alternates between estimating latent variab": "Expectation%E2%80%93maximization_algorithm",
+    "The KL divergence measures how one probability distribution ": "Kullback%E2%80%93Leibler_divergence",
+    "AdaGrad adapts learning rates per parameter by accumulating ": "Stochastic_gradient_descent#AdaGrad",
+    "The naive Bayes classifier assumes all features are conditio": "Naive_Bayes_classifier",
+    "RMSProp divides the learning rate by an exponentially decayi": "Stochastic_gradient_descent#RMSProp",
+    "Sigmoid activation squashes its input to the range zero to o": "Sigmoid_function",
+    "Cyclical learning rates oscillate between bounds during trai": "Learning_rate_schedule",
+    "The attention mechanism lets neural networks weigh the relev": "Attention_(machine_learning)",
+    "Transformers replaced recurrence with self-attention, enabli": "Transformer_(deep_learning_architecture)",
+    "Word embeddings like Word2Vec capture semantic relationships": "Word_embedding",
+    "Generative adversarial networks train a generator and discri": "Generative_adversarial_network",
+    "The transformer architecture uses positional encodings becau": "Transformer_(deep_learning_architecture)",
+    "RLHF fine-tunes language models using human preference ranki": "Reinforcement_learning_from_human_feedback",
+    "Mixture of experts routes each input to a subset of speciali": "Mixture_of_experts",
+    "Neural architecture search automates the design of network t": "Neural_architecture_search",
+    "Retrieval-augmented generation grounds language model respon": "Retrieval-augmented_generation",
+    "Knowledge distillation transfers learned behavior from a lar": "Knowledge_distillation",
+    "Diffusion models generate images by learning to reverse a gr": "Diffusion_model",
+    "Chain-of-thought prompting improves reasoning in large langu": "Chain-of-thought_prompting",
+    "Byte-pair encoding iteratively merges the most frequent char": "Byte_pair_encoding",
+    "The BLEU score measures translation quality by comparing n-g": "BLEU",
+    "Feature pyramids in object detectors fuse multi-scale featur": "Feature_pyramid_network",
+    "The CTC loss function aligns variable-length input sequences": "Connectionist_temporal_classification",
+    "LoRA adapts large pretrained models by training small low-ra": "Low-rank_adaptation",
+    "Classifier-free guidance blends conditional and unconditiona": "Classifier-free_diffusion_guidance",
+    "Vision transformers divide images into fixed-size patches an": "Vision_transformer",
+    "Minimax search with alpha-beta pruning eliminates branches t": "Alpha%E2%80%93beta_pruning",
+    "Multi-head attention runs several attention functions in par": "Multi-head_attention",
+    "Inverse reinforcement learning infers an unknown reward func": "Inverse_reinforcement_learning",
+    "Residual learning reformulates layers to learn additive corr": "Residual_neural_network",
+    "Activation functions like ReLU introduce nonlinearity so tha": "Activation_function",
+    "Self-supervised learning extracts training signal from unlab": "Self-supervised_learning",
+    "The perceptron convergence theorem guarantees a linear class": "Perceptron",
+    "Model parallelism splits a single neural network across mult": "Model_parallelism",
+    "The attention sink phenomenon shows that early tokens accumu": "Attention_(machine_learning)",
+    "A just-in-time compiler translates bytecode into native mach": "Just-in-time_compilation",
+    "Journaling file systems write metadata changes to a log befo": "Journaling_file_system",
+    "RAID 5 stripes data across disks with distributed parity so ": "RAID",
+    "Flash translation layers remap logical addresses to physical": "Flash_translation_layer",
+    "SSD wear leveling distributes write operations evenly across": "Solid-state_drive",
+    "Lock-free data structures use atomic compare-and-swap operat": "Non-blocking_algorithm",
+    "A future represents a value that may not yet be available, l": "Futures_and_promises",
+    "The actor model encapsulates state within independent actors": "Actor_model",
+    "Software transactional memory groups read-write operations i": "Software_transactional_memory",
+    "Compare-and-swap atomically replaces a memory value only if ": "Compare-and-swap",
+    "Work-stealing schedulers let idle threads take tasks from bu": "Work_stealing",
+    "Model checking exhaustively explores all reachable states of": "Model_checking",
+    "Proof assistants like Coq verify mathematical theorems by ty": "Proof_assistant",
+    "The Curry-Howard correspondence establishes a direct mapping": "Curry%E2%80%93Howard_correspondence",
+    "SAT solvers use conflict-driven clause learning to prune the": "Boolean_satisfiability_problem",
+    "The Chinese remainder theorem speeds modular arithmetic by d": "Chinese_remainder_theorem",
+    "UDP provides connectionless datagram delivery with minimal o": "User_Datagram_Protocol",
+    "The QUIC protocol multiplexes streams over encrypted UDP con": "QUIC",
+    "BGP routers exchange reachability information between autono": "Border_Gateway_Protocol",
+    "IP multicast delivers packets to a group of receivers simult": "IP_multicast",
+    "Congestion control algorithms like CUBIC adjust the sending ": "TCP_congestion_control",
+    "Edmonds' blossom algorithm solves maximum matching in genera": "Blossom_algorithm",
+    "The min-cut max-flow theorem states that the maximum flow th": "Max-flow_min-cut_theorem",
+    "Christofides' algorithm guarantees a tour within 1.5 times t": "Christofides_algorithm",
+    "Reference counting frees memory immediately when an object c": "Reference_counting",
+    "Mark-and-sweep garbage collection traces all reachable objec": "Tracing_garbage_collection",
+    "Concurrent mark-sweep collectors reduce pause times by traci": "Concurrent_mark-sweep",
+    "A copying collector compacts live objects into one half of m": "Cheney%27s_algorithm",
+    "RISC architectures use fixed-length instructions and load-st": "Reduced_instruction_set_computer",
+    "CISC instructions can operate directly on memory, reducing i": "Complex_instruction_set_computer",
+    "SIMD instructions apply one operation to multiple data eleme": "Single_instruction,_multiple_data",
+    "VLIW processors rely on the compiler to schedule independent": "Very_long_instruction_word",
+    "Monads in Haskell sequence side effects by chaining computat": "Monad_(functional_programming)",
+    "Continuations capture the rest of a computation as a first-c": "Continuation",
+    "Rust borrow checker enforces that each value has exactly one": "Borrow_checker",
+    "Hindley-Milner type inference determines the most general ty": "Hindley%E2%80%93Milner_type_system",
+    "Hamming codes correct single-bit errors by placing parity bi": "Hamming_code",
+    "Turbo codes approach the Shannon limit by iteratively decodi": "Turbo_code",
+    "LDPC codes use sparse parity-check matrices and belief propa": "Low-density_parity-check_code",
+    "Multi-version concurrency control lets readers access a cons": "Multiversion_concurrency_control",
+    "LSM trees buffer writes in memory and flush sorted runs to d": "Log-structured_merge-tree",
+    "Column stores compress and scan data efficiently for analyti": "Column-oriented_DBMS",
+    "Query optimizers estimate plan costs using table statistics ": "Query_optimization",
+    "Write-ahead log variants like ARIES use physiological loggin": "Algorithms_for_Recovery_and_Isolation_Exploiting_Semantics",
+    "A covering index includes all columns a query needs so the d": "Covering_index",
+    "The Shannon-Hartley theorem sets an upper bound on channel c": "Shannon%E2%80%93Hartley_theorem",
+    "Zero-knowledge proofs let a prover convince a verifier that ": "Zero-knowledge_proof",
+    "Side-channel attacks extract secret keys by measuring physic": "Side-channel_attack",
+    "Diffie-Hellman key exchange lets two parties derive a shared": "Diffie%E2%80%93Hellman_key_exchange",
+    "Certificate authorities sign digital certificates to bind a ": "Certificate_authority",
+    "Elliptic curve cryptography achieves equivalent security to ": "Elliptic-curve_cryptography",
+    "A message authentication code verifies both the integrity an": "Message_authentication_code",
+    "Gaussian processes define a distribution over functions and ": "Gaussian_process",
+    "Markov chain Monte Carlo draws correlated samples from a pos": "Markov_chain_Monte_Carlo",
+    "The do-calculus provides rules for identifying causal effect": "Do-calculus",
+    "Instrumental variables estimate causal effects by exploiting": "Instrumental_variables_estimation",
+    "Propensity score matching balances treated and control group": "Propensity_score_matching",
+    "Counterfactual reasoning asks what outcome would have occurr": "Counterfactual_thinking",
+    "The backdoor criterion identifies sufficient adjustment sets": "Backdoor_criterion",
+    "Message passing neural networks update each node by aggregat": "Message_passing_neural_network",
+    "Graph convolutional networks generalize spatial convolutions": "Graph_neural_network",
+    "Over-smoothing in deep graph networks causes node representa": "Graph_neural_network",
+    "Graph-level readout functions aggregate all node embeddings ": "Graph_neural_network",
+    "Natural gradient descent preconditions updates using the Fis": "Natural_gradient",
+    "Demographic parity requires that a classifier's positive pre": "Fairness_(machine_learning)",
+    "Calibration curves plot predicted probabilities against obse": "Calibration_(statistics)",
+    "Platt scaling fits a logistic regression on model logits to ": "Platt_scaling",
+    "Autoregressive models predict each time step as a function o": "Autoregressive_model",
+    "State space models capture time series dynamics through late": "State-space_representation",
+    "Temporal convolutional networks apply causal dilated convolu": "Temporal_convolutional_network",
+    "Permutation feature importance measures how much predictive ": "Permutation_importance",
+    "SHAP values assign each feature an additive contribution to ": "SHAP",
+    "Partial dependence plots show the marginal effect of one or ": "Partial_dependence_plot",
+    "Query-by-committee selects examples where an ensemble of mod": "Query_by_committee",
+    "Expected model change selects the sample that would most alt": "Active_learning_(machine_learning)",
+    "Rapidly exploring random trees build motion plans by increme": "Rapidly-exploring_random_tree",
+    "Probabilistic roadmaps precompute a graph of collision-free ": "Probabilistic_roadmap",
+    "Task and motion planning integrates symbolic action sequence": "Task_and_motion_planning",
+    "Swarm intelligence algorithms like ant colony optimization s": "Swarm_intelligence",
+    "Independent Q-learning in multi-agent settings suffers from ": "Multi-agent_reinforcement_learning",
+    "Communication protocols in multi-agent reinforcement learnin": "Multi-agent_reinforcement_learning",
+    "Mel spectrograms compress audio frequency bins onto the mel ": "Mel-frequency_cepstrum",
+    "Speaker diarization segments an audio stream into homogeneou": "Speaker_diarisation",
+    "Neural text-to-speech systems convert phoneme sequences into": "Speech_synthesis",
+    "Speaker verification compares voice embeddings extracted by ": "Speaker_recognition",
+    "Circuit analysis traces how specific model components compos": "Mechanistic_interpretability",
+    "Sparse autoencoders decompose neural network activations int": "Sparse_dictionary_learning",
+    "Reward hacking occurs when an agent exploits misspecified re": "Specification_gaming",
+    "Mesa-optimization arises when a learned model internally imp": "Mesa-optimization",
+    "World models learn compressed latent dynamics from raw obser": "World_model",
+    "Sim-to-real transfer trains robot policies in simulation and": "Sim-to-real",
+    "Domain randomization varies simulator parameters like fricti": "Domain_randomization",
+    "Embodied AI systems ground language understanding in physica": "Embodied_cognition",
+    "Contrastive pretraining aligns image and text embeddings in ": "Contrastive_Language-Image_Pre-training",
+    "Vision-language models generate image captions by attending ": "Vision-language_model",
+    "Multimodal embedding spaces enable zero-shot image classific": "Multimodal_learning",
+    "Conditional random fields model label dependencies in sequen": "Conditional_random_field",
+    "Energy-based models assign a scalar energy to each input-out": "Energy-based_model",
+    "Function calling lets language models invoke external APIs b": "Tool_use_(AI)",
+    "Planning with large language models decomposes complex goals": "Automated_planning_and_scheduling",
+    "Code execution as reasoning lets agents write and run progra": "Code_generation_(AI)",
+    "Agentic tool use chains multiple function calls in a loop, w": "AI_agent",
+    "Chinchilla scaling shows that compute-optimal training requi": "Chinchilla_(language_model)",
+    "Power law relationships link model loss to parameter count, ": "Neural_scaling_law",
+    "Emergent abilities appear abruptly at certain model scales, ": "Emergence",
+    "Compute-optimal training allocates a fixed compute budget by": "Neural_scaling_law",
+    "Scaling laws enable researchers to predict large model perfo": "Neural_scaling_law",
+    "The KV cache stores previously computed key and value tensor": "KV_cache",
+    "Prefix caching reuses the KV cache of shared prompt prefixes": "KV_cache",
+    "GPU tensor cores accelerate matrix multiplications by perfor": "Graphics_processing_unit",
+    "TPUs use systolic arrays that pass partial sums between proc": "Tensor_Processing_Unit",
+    "Memory bandwidth often bottlenecks large model training more": "Memory_bandwidth",
+    "Data parallelism replicates the model across devices and par": "Data_parallelism",
+    "The XLA compiler fuses sequences of elementwise operations i": "Accelerated_Linear_Algebra",
+    "IEEE 754 floating point represents numbers using a sign bit,": "IEEE_754",
+    "Loss scaling in mixed-precision training multiplies the loss": "Mixed-precision_training",
+    "Kahan summation compensates for floating-point rounding erro": "Kahan_summation_algorithm",
+    "Graphical models factorize joint distributions into local fa": "Graphical_model",
+    "The Needleman-Wunsch algorithm finds a global alignment of t": "Needleman%E2%80%93Wunsch_algorithm",
+    "Smith-Waterman local alignment identifies the highest-scorin": "Smith%E2%80%93Waterman_algorithm",
+    "Coevolutionary analysis of multiple sequence alignments reve": "Coevolution",
+    "HPC applications commonly use MPI collective operations like": "High-performance_computing",
+    "Human-in-the-loop systems route low-confidence predictions t": "Human-in-the-loop",
+    "The bfloat16 format keeps the same eight-bit exponent as flo": "Bfloat16_floating-point_format",
+    "Gradient checkpointing trades compute for memory by recomput": "Gradient_checkpointing",
+    "BLAST uses short seed matches to quickly filter candidate re": "BLAST_(biotechnology)",
+    "Distributed training uses all-reduce collectives to synchron": "Distributed_computing",
+    "AlphaFold2 predicts protein 3D structures from amino acid se": "AlphaFold",
+    "AlphaFold2 incorporates multiple sequence alignments and str": "AlphaFold",
+    "RoseTTAFold uses a three-track neural network that simultane": "RoseTTAFold",
+    "Energy landscape models represent protein folding as navigat": "Protein_folding",
+    "Inverse folding algorithms like ProteinMPNN design amino aci": "Protein_design",
+    "AlphaFold3 extends structure prediction to complexes of prot": "AlphaFold",
+    "Predicted aligned error matrices from AlphaFold2 reveal conf": "AlphaFold",
+    "Enformer predicts gene expression from DNA sequence by model": "Gene_expression",
+    "DeepVariant uses convolutional neural networks to call genet": "Variant_calling",
+    "DNA language models like the Nucleotide Transformer learn co": "Language_model",
+    "Basenji models predict cell-type-specific chromatin accessib": "Chromatin_accessibility",
+    "Splicing prediction models like SpliceAI identify cryptic sp": "RNA_splicing",
+    "Epigenomic imputation methods use neural networks to predict": "Epigenomics",
+    "Regulatory element classifiers trained on ATAC-seq data can ": "Cis-regulatory_element",
+    "Single-cell RNA sequencing analysis uses graph-based cluster": "Single-cell_sequencing",
+    "Variational autoencoders like scVI model the zero-inflated c": "Variational_autoencoder",
+    "RNA velocity infers future cell states by modeling the ratio": "RNA_velocity",
+    "Trajectory inference algorithms like Monocle3 reconstruct ps": "Trajectory_inference",
+    "Spatial transcriptomics methods combine gene expression prof": "Spatial_transcriptomics",
+    "Cell type annotation transfer methods project labels from re": "Cell_type",
+    "Batch correction algorithms like Harmony integrate single-ce": "Batch_effect",
+    "Graph neural networks on spatial transcriptomics data model ": "Graph_neural_network",
+    "ESM-2 learns protein representations by predicting masked am": "Evolutionary_scale_modeling",
+    "Protein language models capture structural contacts in their": "Language_model",
+    "Zero-shot mutation effect prediction scores variants by comp": "Variant_effect_predictor",
+    "ESM-1v predicts the functional effects of single amino acid ": "Evolutionary_scale_modeling",
+    "Evolutionary scale modeling trains transformer architectures": "Evolutionary_scale_modeling",
+    "ESMFold predicts protein structures directly from single seq": "Protein_structure_prediction",
+    "Protein language model embeddings cluster proteins by functi": "Language_model",
+    "Fine-tuning protein language models on labeled fitness assay": "Language_model",
+    "The ESM-IF1 inverse folding model generates sequences condit": "Protein_design",
+    "Protein language models assign higher likelihoods to residue": "Language_model",
+    "Combining protein language model embeddings with structure-b": "Enzyme_catalysis",
+    "De novo molecule generation uses reinforcement learning to p": "De_novo_drug_design",
+    "QSAR models map molecular descriptors to biological activity": "Quantitative_structure%E2%80%93activity_relationship",
+    "ADMET prediction models estimate absorption, distribution, m": "ADMET",
+    "Radiology AI detects lung nodules on chest CT scans with sen": "Computer-aided_diagnosis",
+    "U-Net architectures segment tumors and organs in medical ima": "U-Net",
+    "Recurrent neural networks applied to electronic health recor": "Electronic_health_record",
+    "Bayesian optimization accelerates clinical trial design by a": "Bayesian_optimization",
+    "Cox proportional hazards models extended with neural network": "Proportional_hazards_model",
+    "Transformer models applied to longitudinal EHR sequences lea": "Electronic_health_record",
+    "Causal inference methods help clinical AI distinguish treatm": "Causal_inference",
+    "SMILES encodes molecular graphs as character strings, enabli": "Simplified_molecular-input_line-entry_system",
+    "Graph neural networks operate directly on molecular graphs, ": "Graph_neural_network",
+    "Molecular fingerprints convert chemical structures into fixe": "Chemical_fingerprint",
+    "Equivariant neural networks respect rotational and translati": "Equivariant_neural_network",
+    "Machine learning potentials accelerate molecular dynamics si": "Machine_learning_interatomic_potential",
+    "Free energy perturbation enhanced by ML surrogate models red": "Free-energy_perturbation",
+    "Neural network potentials trained on density functional theo": "Interatomic_potential",
+    "Typing !! in bash repeats the entire last command, so sudo !": "Bash_(Unix_shell)",
+    "The !$ shorthand expands to the last argument of the previou": "Bash_(Unix_shell)",
+    "Quick substitution with ^old^new reruns the last command aft": "Bash_(Unix_shell)",
+    "Pressing Ctrl-R in bash starts reverse incremental search, l": "Bash_(Unix_shell)",
+    "The fc command opens your last command in your default edito": "Bash_(Unix_shell)",
+    "History expansion !:2 grabs the third argument of the last c": "Bash_(Unix_shell)",
+    "Using ${var:-default} expands to default when var is unset o": "Bash_(Unix_shell)",
+    "The expansion ${var%.*} strips the shortest matching suffix,": "Bash_(Unix_shell)",
+    "Using ${var##*/} strips the longest matching prefix through ": "Bash_(Unix_shell)",
+    "The ${var//old/new} syntax performs global search-and-replac": "Bash_(Unix_shell)",
+    "The expansion ${#var} returns the character length of a vari": "Bash_(Unix_shell)",
+    "Indirect variable references with ${!var} expand the value o": "Bash_(Unix_shell)",
+    "Process substitution with <() presents command output as a t": "Process_substitution",
+    "You can redirect stderr to stdout with 2>&1, or in bash 4+ u": "Redirection_(computing)",
+    "Bash can open TCP connections using /dev/tcp/host/port witho": "Bash_(Unix_shell)",
+    "Here strings with <<< pass a single string as stdin to a com": "Here_document",
+    "Heredocs with <<-EOF allow tab-indented content, stripping l": "Here_document",
+    "Brace expansion {1..100} generates a sequence of numbers inl": "Bash_(Unix_shell)",
+    "Nested brace expansion like {a,b}{1,2} produces the Cartesia": "Bash_(Unix_shell)",
+    "The globstar option in bash 4+ makes **/ match directories r": "Glob_(programming)",
+    "Extended globs enabled with shopt -s extglob let you write ?": "Glob_(programming)",
+    "Pressing Ctrl-Z suspends the foreground process, and typing ": "Job_control_(Unix)",
+    "The disown command detaches a background job from the shell ": "Job_control_(Unix)",
+    "Using coproc spawns a background process with bidirectional ": "Bash_(Unix_shell)",
+    "The trap command can catch signals like EXIT or ERR to run c": "Trap_(computing)",
+    "The wait command blocks until all background jobs finish and": "Wait_(system_call)",
+    "Using type -a instead of which shows all locations of a comm": "Bash_(Unix_shell)",
+    "The command -v builtin is the POSIX-portable way to check if": "Bash_(Unix_shell)",
+    "The read -r -d '' var idiom reads an entire file or stream i": "Bash_(Unix_shell)",
+    "The mapfile builtin reads lines from stdin into an array var": "Bash_(Unix_shell)",
+    "Using printf '%q' escapes a string for safe shell reuse, whi": "Printf_(Unix)",
+    "The compgen -W builtin generates completion matches against ": "Bash_(Unix_shell)",
+    "Piping through tee writes output to both a file and stdout s": "Tee_(command)",
+    "Named pipes created with mkfifo act as persistent FIFO buffe": "Named_pipe",
+    "Grouping commands with curly braces { cmd1; cmd2; } runs the": "Bash_(Unix_shell)",
+    "Running set -euo pipefail at the top of a script makes it ex": "Bash_(Unix_shell)",
+    "The shopt -s globstar option lets ** match files recursively": "Glob_(programming)",
+    "Setting shopt -s nullglob makes unmatched globs expand to no": "Glob_(programming)",
+    "The set -x flag prints each command with its expanded argume": "Bash_(Unix_shell)",
+    "Enabling shopt -s extglob unlocks patterns like !(*.log) to ": "Glob_(programming)",
+    "Declare -A in bash creates an associative array that lets yo": "Bash_(Unix_shell)",
+    "The syntax ${arr[@]:2:3} slices a bash array, returning thre": "Bash_(Unix_shell)",
+    "Using ${!arr[@]} expands to all the keys of a bash array, wh": "Bash_(Unix_shell)",
+    "The expression ${#arr[@]} returns the number of elements in ": "Bash_(Unix_shell)",
+    "Appending to a bash array with arr+=(value) avoids the need ": "Bash_(Unix_shell)",
+    "Double brackets [[ ]] support regex matching with =~ and do ": "Bash_(Unix_shell)",
+    "The (( )) construct in bash evaluates arithmetic expressions": "Bash_(Unix_shell)",
+    "Inside [[ ]], the == operator performs glob-style pattern ma": "Bash_(Unix_shell)",
+    "Bash supports a ternary-style expression with $(( condition ": "Bash_(Unix_shell)",
+    "The single bracket [ is a regular command called test, so it": "Test_(Unix)",
+    "The trap command with EXIT runs a cleanup function automatic": "Trap_(computing)",
+    "Using trap '' SIGINT makes a script ignore interrupt signals": "Trap_(computing)",
+    "A common pattern creates temp files with mktemp and register": "Trap_(computing)",
+    "Trapping SIGUSR1 in a long-running script lets external proc": "Signal_(IPC)",
+    "Multiple trap commands for the same signal overwrite each ot": "Trap_(computing)",
+    "The exec 3>file command opens file descriptor 3 for writing,": "File_descriptor",
+    "Redirecting with >&3 sends output to a previously opened fil": "File_descriptor",
+    "Closing a file descriptor with exec 3>&- frees it so the und": "File_descriptor",
+    "Reading from /dev/fd/N accesses file descriptor N as if it w": "File_descriptor",
+    "Swapping stdout and stderr uses three steps: exec 3>&1 1>&2 ": "File_descriptor",
+    "The ssh -J flag specifies a jump host, letting you reach a p": "OpenSSH",
+    "SSH ControlMaster multiplexing reuses a single TCP connectio": "OpenSSH",
+    "Running ssh user@host 'tar czf - /path' | tar xzf - copies a": "OpenSSH",
+    "Local port forwarding with ssh -L 8080:dbhost:5432 tunnels a": "Port_forwarding",
+    "The sshfs command mounts a remote filesystem over SSH so you": "SSHFS",
+    "The /usr/bin/time -v command reports peak memory, page fault": "Time_(Unix)",
+    "Setting TIMEFORMAT='%3R seconds' changes how the bash time k": "Bash_(Unix_shell)",
+    "Adding PS4='+$(date +%s.%N) ' before set -x prefixes each tr": "Bash_(Unix_shell)",
+    "GNU parallel splits input across CPU cores and runs commands": "GNU_parallel",
+    "Using wait -n in bash 4.3 and later returns as soon as any b": "Bash_(Unix_shell)",
+    "MapReduce processes large datasets in parallel by splitting ": "MapReduce",
+    "A compiler converts high-level source code into machine inst": "Compiler",
+    "Virtual memory lets processes use more address space than ph": "Virtual_memory",
+    "Write-ahead logging ensures database crash recovery by recor": "Write-ahead_logging",
+    "A disjoint-set data structure with union by rank and path co": "Disjoint-set_data_structure",
+    "Dropout randomly deactivates neurons during training, forcin": "Dilution_(neural_networks)",
+    "The softmax function converts a vector of raw logits into a ": "Softmax_function",
+    "The Adam optimizer combines momentum with per-parameter adap": "Stochastic_gradient_descent#Adam",
+    "One-hot encoding represents categorical variables as binary ": "One-hot",
+    "The hinge loss used in SVMs penalizes predictions that fall ": "Hinge_loss",
+    "The Huber loss combines squared error for small residuals wi": "Huber_loss",
+    "The reparameterization trick in VAEs enables backpropagation": "Reparameterization_trick",
+    "The contrastive loss pulls similar pairs closer and pushes d": "Contrastive_loss",
+    "The learning rate warmup strategy starts with a small rate a": "Learning_rate",
+    "The triplet loss trains embeddings by requiring an anchor to": "Triplet_loss",
+    "AlphaGo combined Monte Carlo tree search with deep neural ne": "AlphaGo",
+    "Beam search explores multiple candidate sequences in paralle": "Beam_search",
+    "Non-maximum suppression removes redundant overlapping boundi": "Non-maximum_suppression",
+    "Policy gradient methods optimize reinforcement learning poli": "Policy_gradient_methods",
+    "Nucleus sampling selects tokens from the smallest set whose ": "Top-p_sampling",
+    "Gradient accumulation simulates larger batch sizes by summin": "Gradient_accumulation",
+    "Neural radiance fields represent 3D scenes as continuous vol": "Neural_radiance_field",
+    "Transfer learning reuses features from a model trained on on": "Transfer_learning",
+    "Monte Carlo dropout approximates Bayesian uncertainty by run": "Monte_Carlo_dropout",
+    "Top-k sampling restricts token generation to the k highest-p": "Top-k_sampling",
+    "The Miller-Rabin primality test uses modular exponentiation ": "Miller%E2%80%93Rabin_primality_test",
+    "The card table in generational GC tracks old-to-young pointe": "Garbage_collection_(computer_science)",
+    "Register renaming eliminates false data dependencies by mapp": "Register_renaming",
+    "Lambda calculus expresses all computation using only anonymo": "Lambda_calculus",
+    "Lossy compression discards perceptually irrelevant details, ": "Lossy_compression",
+    "Mutual information quantifies how much knowing one random va": "Mutual_information",
+    "DINO distills knowledge from a momentum teacher into a stude": "Self-supervised_learning",
+    "Saddle points have zero gradient but mixed curvature, slowin": "Saddle_point",
+    "The Hessian matrix captures second-order curvature informati": "Hessian_matrix",
+    "CatBoost handles categorical features natively using ordered": "CatBoost",
+    "Pool-based active learning selects the most informative exam": "Active_learning_(machine_learning)",
+    "Stream-based active learning decides whether to label each i": "Active_learning_(machine_learning)",
+    "Angular loss penalizes deviations from a target angle at the": "Metric_learning",
+    "Hard negative mining focuses training on the closest incorre": "Metric_learning",
+    "Multi-similarity loss jointly weighs self-similarity, positi": "Metric_learning",
+    "Simultaneous localization and mapping lets a robot build a m": "Simultaneous_localization_and_mapping",
+    "Temporal modeling in video networks uses three-dimensional c": "3D_convolution",
+    "Program repair systems localize buggy statements and synthes": "Automatic_bug_fixing",
+    "Formal specification in program synthesis constrains the sea": "Program_synthesis",
+    "Execution-guided synthesis prunes candidate programs early b": "Program_synthesis",
+    "Activation patching isolates causal model components by repl": "Activation_patching",
+    "Scalable oversight methods like debate and recursive reward ": "AI_alignment",
+    "Logic-neural integration embeds first-order logic constraint": "Neurosymbolic_AI",
+    "Differentiable interpreters execute symbolic programs on neu": "Differentiable_programming",
+    "Tactile sensing arrays on robotic grippers provide contact f": "Tactile_sensor",
+    "Locomotion learning through deep reinforcement learning allo": "Legged_robot",
+    "Continuous batching inserts new requests into a running batc": "Continuous_batching",
+    "Graph-level optimization passes such as constant folding and": "Optimizing_compiler",
+    "Numerical instability in softmax is avoided by subtracting t": "Softmax_function",
+    "Protein structure prediction models output per-residue confi": "Protein_structure_prediction",
+    "The scGPT foundation model learns cell representations from ": "Single-cell_sequencing",
+    "Anomaly detection in brain MRI uses autoencoders trained on ": "Anomaly_detection",
+    "Attention-gated networks highlight diagnostically relevant r": "Attention_(machine_learning)",
+    "Message-passing neural networks iteratively update atom feat": "Message_passing_neural_network",
+    "Binding affinity prediction models estimate the strength of ": "Binding_affinity",
+    "Scoring functions trained on co-crystal structures distingui": "Scoring_functions_for_docking",
+    "Contrastive learning on protein-ligand pairs improves virtua": "Virtual_screening",
+    "Data augmentation artificially expands training sets by appl": "Data_augmentation",
+    "Gradient descent updates model parameters by moving in the d": "Gradient_descent",
+    "Feature scaling ensures that no single variable dominates th": "Feature_scaling",
+    "Gradient clipping caps the norm of gradients during training": "Gradient_clipping",
+    "Curriculum learning trains models on progressively harder ex": "Curriculum_learning",
+    "Feature visualization optimizes an input image to maximally ": "Feature_visualization_(machine_learning)",
+    "Variational inference approximates an intractable posterior ": "Variational_Bayesian_methods",
+    "Bayesian optimization selects the next query point by maximi": "Bayesian_optimization",
+    "Uncertainty sampling queries the instance for which the curr": "Active_learning_(machine_learning)",
+    "Federated learning trains models across hospital networks wi": "Federated_learning",
+    "Three-dimensional conformer generation predicts the spatial ": "Conformer_generation",
+    "Extended-connectivity fingerprints encode circular substruct": "Extended-connectivity_fingerprint",
+    "Digital pathology models classify tumor subtypes from whole-": "Digital_pathology",
+    "Retinal fundus imaging with deep learning can detect diabeti": "Retinal_scan",
+    "Biomarker discovery pipelines use gradient-based feature att": "Biomarker_discovery",
+    "Interaction fingerprints encode hydrogen bonds, salt bridges": "Molecular_descriptor",
+}
+
+
+def _extract_subject(sentence):
+    """Extract the main subject from a sentence for Wikipedia lookup."""
+    s = sentence.strip()
+
+    # Check overrides first (match on longest prefix)
+    best_match = None
+    for key, article in WIKI_OVERRIDES.items():
+        if s.startswith(key):
+            if best_match is None or len(key) > len(best_match[0]):
+                best_match = (key, article)
+    if best_match:
+        return best_match[1]
+
+    # Pattern: "The X algorithm/theorem/problem/protocol/equation ..."
+    m = re.match(
+        r"^The\s+(.+?)\s+(?:algorithm|theorem|problem|protocol|architecture|"
+        r"equation|hypothesis|method|formula|phenomenon|correspondence|criterion)\b", s)
+    if m:
+        return m.group(1).replace(" ", "_")
+
+    # Pattern: "X's algorithm/law/theorem ..."
+    m = re.match(r"^(\w+(?:['’]s)?)\s+(algorithm|theorem|law|rule)\b", s)
+    if m:
+        return f"{m.group(1)}_{m.group(2)}"
+
+    # Pattern: "A/An X ..." where X is a data structure / concept
+    m = re.match(
+        r"^An?\s+(.+?)\s+(?:is|achieves|stores|uses|lets|keeps|builds|finds|"
+        r"guarantees|represents|provides|evicts|signals|detects|verifies)\b", s)
+    if m:
+        subj = m.group(1)
+        if len(subj.split()) <= 5:
+            return subj.replace(" ", "_")
+
+    # Pattern: named thing at start (capitalized / hyphenated words)
+    m = re.match(
+        r"^([A-Z][\w’'-]+(?:\s+[A-Za-z][\w’'-]+){0,4})\s+"
+        r"(?:is|are|uses?|lets?|finds?|builds?|tracks?|splits?|maps?|creates?|"
+        r"converts?|computes?|predicts?|generates?|combines?|exploits?|estimates?|"
+        r"measures?|enables?|provides?|reduces?|assigns?|updates?|trains?|learns?|"
+        r"models?|encodes?|applies?|extends?|incorporates?|outputs?|defines?|"
+        r"replaces?|captures?|achieves?|stabilizes?|guarantees?|minimizes?|"
+        r"simplif(?:y|ies)|requires?|constrains?|routes?|detects?|classif(?:y|ies)|"
+        r"segments?|compress(?:es)?|infers?|reconstruct|projects?|integrat(?:e|es)|"
+        r"predicts?|operates?|select|accelerat(?:e|es)|adapts?|opens?|reads?|"
+        r"runs?|distribut(?:e|es)|divid(?:e|es)|strips?|expands?|starts?)\b", s)
+    if m:
+        return m.group(1).replace(" ", "_")
+
+    # Fallback: take words until a common verb
+    stop = {'is', 'are', 'uses', 'lets', 'finds', 'builds', 'can', 'does',
+            'achieves', 'stores', 'keeps', 'guarantees', 'predicts', 'has',
+            'computes', 'in', 'by', 'with', 'that', 'the', 'a', 'an',
+            'updates', 'trains', 'generates', 'combines', 'exploits',
+            'estimates', 'measures', 'reduces', 'allows', 'provides',
+            'makes', 'opens', 'runs', 'sets', 'shows', 'adds'}
+    words = s.split()
+    subj_words = []
+    for w in words[:6]:
+        if w.lower() in stop:
+            break
+        subj_words.append(w)
+    if subj_words:
+        return "_".join(subj_words).rstrip(",.")
+
+    return words[0]
+
+
+def get_wiki_url(sentence):
+    """Get a Wikipedia URL for the given sentence's topic."""
+    article = _extract_subject(sentence)
+    article = article.replace(" ", "_")
+    return f"https://en.wikipedia.org/wiki/{article}"
+
+
 TITLE_ART = r"""
   ______                   ______          __
  /_  __/_  ______  ___    / ____/___ ___  / /_
@@ -799,9 +1305,20 @@ def run_round(stdscr, sentence):
     accuracy = (correct / len(sentence)) * 100
 
     bar_y = text_start_y + len(lines) + 2
-    draw_centered(stdscr, bar_y + 4, "Done!  Press any key to continue.", curses.color_pair(6) | curses.A_BOLD)
+    draw_centered(stdscr, bar_y + 4, "Done!  Press any key to continue  •  L to learn more",
+                  curses.color_pair(6) | curses.A_BOLD)
+
+    url = get_wiki_url(sentence)
+    short_url = url.replace("https://en.wikipedia.org/wiki/", "wiki: ")
+    draw_centered(stdscr, bar_y + 6, short_url, curses.A_DIM)
+
     stdscr.refresh()
-    stdscr.getch()
+    key = stdscr.getch()
+    if key in (ord('l'), ord('L')):
+        curses.endwin()
+        webbrowser.open(url)
+        curses.doupdate()
+        stdscr.refresh()
 
     return {'wpm': wpm, 'accuracy': accuracy}
 

@@ -21,6 +21,7 @@ That's it. No dependencies beyond Python 3 and a terminal. Works on Linux and ma
 - **Live WPM and accuracy** as you type
 - **Progress bar** per sentence
 - **10 random sentences per session** with a results summary at the end
+- **Learn more** — press **L** after completing a sentence to open the Wikipedia article for that topic
 
 ## Topics covered
 
@@ -40,6 +41,7 @@ That's it. No dependencies beyond Python 3 and a terminal. Works on Linux and ma
 | Any key | Start typing |
 | Backspace | Delete last character |
 | Esc | Skip current sentence |
+| L | Open Wikipedia article for the topic (after completing a sentence) |
 | q | Quit (from title or results screen) |
 
 ## Why this exists
